@@ -33,6 +33,7 @@ func main() {
 	drone.On(tello.ConnectedEvent, func(data interface{}) {
 		drone.SetVideoEncoderRate(tello.VideoBitRateAuto)
 		drone.StartVideo()
+		// it need to send `StartVideo` to the drone every 100ms
 		gobot.Every(100*time.Millisecond, func() {
 			if err := drone.StartVideo(); nil != err {
 				fmt.Printf("fail to start video on drone:%s\n", err)
