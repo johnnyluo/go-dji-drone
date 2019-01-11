@@ -2,14 +2,14 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
 	"time"
 
-	"gobot.io/x/gobot"
-
 	"git.campmon.com/golang/corekit/proc"
+	"gobot.io/x/gobot"
 	"gobot.io/x/gobot/platforms/dji/tello"
 )
 
@@ -20,6 +20,7 @@ const offset = 32767.0
 func main() {
 
 	mplayer := exec.Command("mplayer", "-fps", "60", "-")
+
 	mplayerIn, err := mplayer.StdinPipe()
 	if nil != err {
 		panic(err)
@@ -58,57 +59,61 @@ func main() {
 	}
 	donechan := make(chan struct{})
 	go droneCtrl(donechan)
-
+	// robot := gobot.NewRobot("bot", []gobot.Device{drone})
+	// robot.Start()
 	if err := mplayer.Wait(); nil != err {
 		panic(err)
 	}
+
 	proc.WaitForTermination()
 	close(donechan)
 	// stop drone
 	drone.Halt()
+
 }
 func droneCtrl(done chan struct{}) {
 	fmt.Println("wait for input")
+	r := bufio.NewReader(os.Stdin)
+
 	for {
 		select {
 		case <-done:
 			return
 		default:
-			reader := bufio.NewReader(os.Stdin)
-			item, err := reader.ReadString('\n')
+			item, err := r.ReadString('\n')
 			if nil != err {
-				fmt.Printf("fail to read: %s", err)
+				fmt.Println("err:", err)
 			}
-			fmt.Println(item)
-			switch item {
-			case "takeoff":
+			switch string(bytes.TrimSuffix([]byte(item), []byte{'\n'})) {
+			case "t":
 				if err := drone.TakeOff(); nil != err {
-					fmt.Printf("fail to take off, err : %s", err)
+					fmt.Printf("fail to take off ,err : %s", err)
 				}
 			case "w":
 				if err := drone.Up(5); nil != err {
 					fmt.Printf("drone fail to go up,err:%s", err)
 				}
+			case "s":
+				if err := drone.Down(5); nil != err {
+					fmt.Printf("drone fail to go down,err:%s", err)
+				}
 			case "a":
 				if err := drone.Left(5); nil != err {
-					fmt.Printf("drone fail to go left,err:%s", err)
+					fmt.Printf("drone fail to go Left,err:%s", err)
 				}
 			case "d":
 				if err := drone.Right(5); nil != err {
 					fmt.Printf("drone fail to go right,err:%s", err)
 				}
-			case "s":
-				if err := drone.Down(5); nil != err {
-					fmt.Printf("drone fail to go left,err:%s", err)
-				}
-			case "land":
+			case "l":
 				if err := drone.Land(); nil != err {
 					fmt.Printf("drone fail to land,err:%s", err)
 				}
 			}
-		}
 
+		}
 	}
+
 }
 
 func printFlightData(d *tello.FlightData) {
